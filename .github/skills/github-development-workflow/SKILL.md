@@ -20,22 +20,37 @@ coordination, verification, or delivery need.
 Use relevant capabilities fully. Do not activate features, manufacture work
 items, or change repository policy merely because GitHub supports them.
 
-Read `references/github-features.md` when selecting capabilities beyond the
-basic issue, branch, and pull-request lifecycle.
+Read only the references needed for the active task:
+
+- [PR delivery](references/pull-request-delivery.md): publishing, check states,
+  review, merge decisions, and cleanup.
+- [Issue relationships](references/issue-relationships.md): native hierarchy
+  and dependencies, including API fallbacks for older CLI versions.
+- [Feature playbook](references/github-features.md): Projects, Actions,
+  security, releases, deployments, and other conditional capabilities.
 
 Commands in this skill are recipes, not a script. Resolve and validate every
 variable before use. Adapt commands to the installed CLI and GitHub host.
 
 ## 1. Establish scope, authority, and safety
 
-Determine the requested outcome and stopping point:
+Choose a route from the request, then do only the necessary steps:
 
-- Analysis only.
-- Local implementation.
-- Commit and publish a branch or draft PR.
-- Ready-for-review PR.
-- Merge, enable auto-merge, or enter a merge queue.
-- Release, package publication, deployment, or repository administration.
+| Request | Route and stopping point |
+| --- | --- |
+| Explain, inspect, or review | Relevant read-only discovery and evidence; return findings. |
+| Triage or organize issues | Discover policy, then native work-item operations; no code workspace needed. |
+| Implement locally | Discovery, isolated workspace, implementation, and verification; stop locally. |
+| Commit or push a branch | Implement and verify, then the requested commit/push; stop before PR creation. |
+| Open a draft PR | Implement, verify, publish, and report check state; keep draft. |
+| Open a PR when done | Publish reviewable work and mark ready; report pending review/checks. |
+| Diagnose or fix an existing PR | Inspect its current head and checks; change/push only when the request authorizes a fix. |
+| Merge, auto-merge, or queue | Validate the existing PR and applicable authority; report the actual resulting state. |
+| Release, deploy, or administer | Use the matching feature playbook section and its independent gates. |
+
+An existing issue or PR is an entry point, not a reason to recreate prior
+steps. A request to keep work local also excludes server-side branch creation
+through `gh issue develop`.
 
 Establish authorization once, then act within it without repeatedly asking
 about routine steps already covered by the request.
@@ -172,6 +187,11 @@ Before creating anything:
 - Reuse suitable existing work without taking over another contributor's
   branch or assignment.
 
+Search results may be paginated or capped. Inspect sufficient pages and exact
+identities before declaring no duplicate exists. If visibility or a search cap
+prevents a complete answer, report the search limits. After a timeout on a
+write, re-read the target before retrying.
+
 Issue handling:
 
 - An explicit open issue is the primary work item unless scope disagrees.
@@ -190,6 +210,10 @@ When decomposition is justified:
 - Do not present textual references as native hierarchy or dependencies.
 - Keep sub-issues independently reviewable and mergeable where practical.
 - Do not automatically work on dependencies outside the approved scope.
+
+Use the [relationship recipes](references/issue-relationships.md) when the CLI
+lacks native flags. Verify relationship direction and read back the result;
+parent membership does not itself impose execution order.
 
 Assign or update work-item ownership only according to repository conventions
 and authorization. Do not remove existing assignees merely to claim the task.
@@ -310,248 +334,39 @@ Do not weaken tests or security checks merely to obtain a green result.
 If only local work was authorized, stop at the requested local deliverable.
 Report remaining verification or publication steps accurately.
 
-## 6. Commit and publish a draft PR
-
-Proceed only when publication is authorized.
-
-Review the complete diff and ensure it contains no unrelated work, credentials,
-private vulnerability details, or accidental artifacts.
-
-Stage explicit intended paths. Inspect the staged diff:
-
-```bash
-git diff --cached --check
-git diff --cached
-```
-
-Commit according to repository conventions. Do not impose Conventional Commits,
-invent signing identities, or bypass required hooks/signatures.
-
-Push to the verified head repository:
-
-```bash
-git push -u "$PUSH_REMOTE" "$BRANCH"
-```
-
-If denied, distinguish permissions, token scopes, rules, and repository policy.
-Do not bypass restrictions or silently choose a different publication target.
-Use an authorized fork only when appropriate.
-
-Before PR creation, check again for an existing PR with the same head repository,
-branch, and intended base. Update the existing PR rather than duplicating it.
-
-Use the repository's PR template. Include:
-
-- Purpose and scope.
-- Changes made.
-- Verification evidence.
-- Known failures or limitations.
-- Screenshots, migration, rollout, or compatibility notes when relevant.
-
-Use closing keywords in the PR body only when the PR actually completes the
-issue and GitHub's closing semantics apply, normally upon merge into the
-default branch.
-
-Use a qualified reference when helpful:
-
-```text
-Closes OWNER/REPO#42
-```
-
-For partial work, non-default targets, or contextual issues, use references
-instead. Do not close a parent issue with unfinished acceptance criteria.
-
-Create a draft with explicit repository, base, and head:
-
-```bash
-gh pr create --repo "$REPO" \
-  --draft \
-  --base "$BASE_BRANCH" \
-  --head "$PR_HEAD" \
-  --title "$TITLE" \
-  --body-file "$PR_BODY_FILE"
-```
-
-`PR_HEAD` is the branch or supported fork-qualified head identifier.
-Use the host/CLI's documented syntax for cross-repository PRs.
-
-Record the PR URL, number, and head SHA.
-
-A draft may preserve incomplete work and failure evidence when publication is
-safe and authorized. A draft is not an exception to secret-handling or private
-security-reporting requirements.
-
-## 7. Observe CI, security, and review
-
-Inspect the current PR state:
-
-```bash
-gh pr view "$PR_NUMBER" --repo "$REPO" --json \
-  url,state,isDraft,baseRefName,headRefOid,mergeable,mergeStateStatus,\
-  reviewDecision,statusCheckRollup
-
-gh pr checks "$PR_NUMBER" --repo "$REPO"
-```
-
-Watch required checks only with a bounded session/tool timeout:
-
-```bash
-gh pr checks "$PR_NUMBER" --repo "$REPO" --required --watch
-```
-
-Interpret results carefully:
-
-- No reported checks is not automatically success.
-- Pending, missing, skipped, approval-blocked, and failed checks differ.
-- A required-check list is not the entirety of repository policy.
-- Inspect relevant non-required failures and security findings too.
-- Associate evidence with the current head or its corresponding GitHub
-  test-merge/merge-group commit, not an obsolete run.
-- An inaccessible policy or check remains unknown.
-- GitHub mergeability can be temporarily unknown; re-query with bounded
-  backoff instead of guessing.
-
-For failures, inspect relevant Actions or external-check logs, diagnose,
-fix, verify locally, and push. Invalidate old verification when the head changes.
-
-Draft-to-ready transition:
-
-- Honor a request to keep the PR draft.
-- Normally keep incomplete work or unresolved implementation failures draft.
-- Some workflows intentionally skip drafts or start on `ready_for_review`.
-- If the implementation is reviewable and local requirements are satisfied,
-  mark ready when necessary to trigger those workflows or obtain required
-  human actions. Clearly report that remote verification is still pending.
-- Never change workflow security or expose secrets just to run draft/fork CI.
-
-Mark ready when appropriate:
-
-```bash
-gh pr ready "$PR_NUMBER" --repo "$REPO"
-```
-
-Allow normal CODEOWNERS routing. Request additional reviewers only when useful
-or required. Optional automated review does not replace required human review.
-
-Do not approve the agent's own work through another identity or otherwise
-manufacture approval.
-
-Address review feedback, verify again, and preserve collaborators' changes.
-Resolve conversations only after the concern is addressed and repository
-conventions permit doing so.
-
-If GitHub requires a branch update, use the repository-approved merge/rebase
-method, optionally `gh pr update-branch` when suitable. Check for concurrent
-updates. Every changed head requires renewed verification.
-
-Record `VALIDATED_HEAD` as the exact head whose diff was reviewed and whose
-local verification requirements were satisfied. Record remote check and
-review state separately.
-
-If external approval, credentials, CI, or deployment is pending, return a
-bounded handoff with the responsible next action instead of waiting forever.
-
-## 8. Merge only within authorization
-
-Before an immediate merge, auto-merge request, or queue enrollment:
-
-1. Confirm that the operation is authorized.
-2. Re-read PR state, target branch, policy, and head SHA.
-3. Compare the current head with `VALIDATED_HEAD`.
-4. If different, inspect and validate the new head; do not simply overwrite
-   the recorded SHA with the latest value.
-5. Confirm the PR is not draft and no known unresolved implementation or
-   security problem makes the requested operation inappropriate.
-
-Immediate merging requires GitHub's applicable requirements to be satisfied.
-Authorized auto-merge or queue enrollment may wait for GitHub-managed gates
-when repository policy permits.
-
-For repositories without a required merge queue, choose the method from:
-
-- Repository instructions and target-branch policy.
-- Allowed merge methods.
-- The viewer's preference, only if compatible with those constraints.
-
-Do not hard-code squash merging. If no unambiguous allowed method can be
-selected, ask rather than changing repository settings.
-
-Set `MERGE_FLAG` to exactly one supported, permitted option:
-`--merge`, `--squash`, or `--rebase`.
-
-For an authorized immediate merge:
-
-```bash
-gh pr merge "$PR_NUMBER" --repo "$REPO" \
-  "$MERGE_FLAG" \
-  --match-head-commit "$VALIDATED_HEAD"
-```
-
-For authorized auto-merge, if available:
-
-```bash
-gh pr merge "$PR_NUMBER" --repo "$REPO" \
-  --auto \
-  "$MERGE_FLAG" \
-  --match-head-commit "$VALIDATED_HEAD"
-```
-
-For a required merge queue, let GitHub manage its strategy:
-
-```bash
-gh pr merge "$PR_NUMBER" --repo "$REPO" \
-  --match-head-commit "$VALIDATED_HEAD"
-```
-
-Inspect the result: queue-required behavior may enqueue the PR or enable
-automatic progression while requirements are pending.
-
-Never use `--admin` to bypass reviews, checks, deployments, or the queue.
-
-`--match-head-commit` protects the request against a changed head. It is not
-a permanent lock on future auto-merge or merge-queue execution. Later pushes
-require renewed assessment; GitHub rules govern future execution.
-
-Do not combine merging with local branch deletion. Verify the actual result:
-
-```bash
-gh pr view "$PR_NUMBER" --repo "$REPO" --json \
-  state,mergedAt,mergeCommit,headRefOid,url
-```
-
-A successful CLI invocation does not necessarily mean the PR merged.
-Distinguish merged, auto-merge-enabled, queued, waiting, and failed states.
-
-## 9. Clean up only verified, agent-owned state
-
-Do not remove the branch or worktree merely because auto-merge is enabled
-or the PR is queued.
-
-After confirming the PR is actually merged:
-
-- Confirm the local branch has no additional unpublished commits.
-- Check tracked, untracked, and ignored files for work or unique artifacts
-  that must be preserved.
-- Remove only the agent-owned worktree, from outside that worktree.
-- Do not use forced removal.
-- Delete a local topic branch only when safe. If normal deletion refuses
-  after squash/rebase merging, retain it rather than escalating automatically.
-- Allow configured GitHub branch deletion to operate; separately authorize
-  any additional remote cleanup.
-- Never switch, pull, reset, or broadly prune the user's original workspace.
-- Confirm expected issue closure and authorized Project transitions.
-- Continue with another sub-issue only if it is unblocked and within scope.
-
-If the PR is closed without merging, preserve work unless disposal is
-separately authorized.
-
-## 10. Deliver an evidence-based handoff
+## 6. Deliver only the requested outcome
+
+For a commit, pushed branch, or PR, read the relevant sections of
+[PR delivery](references/pull-request-delivery.md). Stop after the requested
+deliverable; a branch-only request does not require a PR.
+
+- Review and stage only intended changes, then commit using repository conventions.
+- Publish only to the verified destination. Reuse an existing PR for the same
+  head repository, branch, and base.
+- Keep a requested draft draft. Otherwise mark reviewable work ready, accounting
+  for workflows triggered by that transition.
+- Record local evidence and GitHub checks separately for the current head.
+  Missing checks require diagnosis; no configured CI can be reported as
+  not applicable without preventing a reviewable PR.
+- Merge, auto-merge, and queue enrollment require applicable authorization.
+  Revalidate changed heads and protect merge requests with
+  `--match-head-commit "$VALIDATED_HEAD"`.
+- Verify actual merge before cleaning up only agent-owned state.
+
+For review-only work or CI diagnosis, enter the relevant delivery section
+directly. Do not repeat implementation, issue creation, or PR creation.
+For releases, deployments, Projects, or administration, use the appropriate
+section of the [feature playbook](references/github-features.md).
+
+## 7. Deliver an evidence-based handoff
 
 Use the most precise state:
 
 - `NO_CODE_CHANGE`
 - `ALREADY_RESOLVED`
 - `LOCAL_ONLY`
+- `BRANCH_PUBLISHED`
+- `DRAFT_READY` (reviewable work intentionally kept draft)
 - `DRAFT_BLOCKED`
 - `AWAITING_REVIEW`
 - `AWAITING_MERGE`
@@ -570,7 +385,7 @@ PR:
 Validated head:
 Merge commit, if merged:
 Changes:
-Verification: passed / failed / pending / not run
+Verification: passed / failed / pending / not run / not applicable
 Policy or permission blockers:
 Next action and responsible actor:
 Workspace / branch preservation or cleanup:
@@ -579,4 +394,4 @@ Workspace / branch preservation or cleanup:
 Include links and concise evidence. Omit irrelevant fields.
 
 Never report unrun checks as passing, enabled auto-merge as merged, a textual
-reference as a native relationship, or incomplete cleanup as complete
+reference as a native relationship, or incomplete cleanup as complete.

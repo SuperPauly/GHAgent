@@ -2,7 +2,14 @@
 
 A coding-agent skill for taking repository work from a request to an accurate GitHub handoff. It uses GitHub's own issues, branches, pull requests, checks, reviews, and merge policy when they help the task, while preserving unrelated work in the user's checkout.
 
-The skill lives at [`.github/skills/github-development-workflow/SKILL.md`](.github/skills/github-development-workflow/SKILL.md). Its [feature playbook](.github/skills/github-development-workflow/references/github-features.md) covers capabilities beyond the ordinary issue-to-PR path.
+The skill lives at [`.github/skills/github-development-workflow/SKILL.md`](.github/skills/github-development-workflow/SKILL.md). It routes each request to the necessary work and loads detailed references as needed.
+
+| File | When the agent uses it |
+| --- | --- |
+| [Core skill](.github/skills/github-development-workflow/SKILL.md) | Task routing, authority, repository discovery, isolated development, and handoff |
+| [PR delivery](.github/skills/github-development-workflow/references/pull-request-delivery.md) | Commit/push, draft and ready PRs, CI diagnosis, reviews, merges, and cleanup |
+| [Issue relationships](.github/skills/github-development-workflow/references/issue-relationships.md) | Native sub-issues and blocking dependencies, including API fallbacks |
+| [Feature playbook](.github/skills/github-development-workflow/references/github-features.md) | Projects, Actions, security, releases, deployments, and administration |
 
 ## What it does
 
@@ -38,6 +45,15 @@ Use the github-development-workflow skill to fix issue #42, run the relevant che
 ```
 
 The skill starts by determining the requested stopping point. A task may end with local work, a pushed branch, a draft or ready PR, an authorized merge, or a documented blocker. Publishing a branch does not imply permission to merge, deploy, release, or administer the repository.
+
+Other supported requests include:
+
+- “Review PR #17 and return findings here.” The agent inspects the existing PR without publishing a review or changing its branch.
+- “Fix this locally; don't push.” The agent uses a local worktree without creating a GitHub development branch.
+- “Commit and push the fix, but don't open a PR.” The workflow ends at the verified remote branch.
+- “Make issue #42 depend on #41.” The agent checks existing relationships and records #41 as the blocker of #42.
+
+Check results are reported as passed, failed, pending, not run, or not applicable. An absent check is investigated; a repository with no configured CI can still receive a reviewable PR, with local verification and the CI limitation stated clearly.
 
 It checks the installed `gh` version and command help before relying on newer flags. For example, current GitHub CLI documents an issue-linked worktree with `gh issue develop --checkout --worktree <path>`, but older versions lack `--worktree`. The skill falls back to Git worktrees or a supported API where appropriate and reports unavailable native relationships honestly. See the [GitHub CLI issue development manual](https://cli.github.com/manual/gh_issue_develop).
 
