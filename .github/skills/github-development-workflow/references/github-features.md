@@ -63,6 +63,23 @@ override stricter target-branch or organization policy.
 Batch independent reads where useful, cache stable metadata, and serialize
 dependent writes. Respect rate limits and retry guidance.
 
+### API request correctness
+
+For REST reads with `-f` or `-F`, set `--method GET` explicitly: adding fields
+otherwise changes `gh api` to POST. Use `--hostname` and explicit repository
+paths so the current checkout cannot choose the wrong target.
+
+Use `-F` for typed values, including numeric REST database IDs; use `-f` for
+literal strings. Keep shell arguments quoted and put multiline bodies in files.
+When using `--input`, additional field flags become query parameters, not body
+fields. Follow the endpoint's schema and the host's supported API version.
+
+Paginate lists before claiming absence. REST `--paginate` returns pages;
+GraphQL pagination needs a query with an end cursor and `pageInfo`. Do not
+assume concatenated pages form a single JSON document; probe `--slurp` support
+or process pages separately. A truncated or inaccessible result stays partial.
+See the [GitHub CLI API manual](https://cli.github.com/manual/gh_api).
+
 ## 1. Issues, issue types, hierarchy, and dependencies
 
 Use issues for persistent scope, acceptance criteria, bugs, and work that
@@ -89,6 +106,9 @@ Before writing relationships:
 
 If native relationships are unavailable, informational links may still help,
 but explicitly disclose that they are not native hierarchy or dependencies.
+
+Use the [relationship recipes](issue-relationships.md) for explicit API
+fallbacks, identifier mapping, dependency direction, and read-after-write checks.
 
 Render the repository's issue template or form requirements into the submitted
 content. Do not post empty placeholders or silently ignore required fields.
