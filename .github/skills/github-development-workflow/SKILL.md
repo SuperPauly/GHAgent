@@ -219,9 +219,8 @@ Important:
 
 - Creating a native development branch is a server-side write, even before
   implementation is pushed.
-- Use `--worktree` only if the installed CLI supports it, following its actual
-  documented syntax.
-- Do not assume `--worktree` accepts a path or needs `--checkout`.
+- Current GitHub CLI documents `--checkout --worktree <path>` for a new
+  issue-linked worktree. Check the installed CLI before using those flags.
 - Never use a checkout option that changes the user's original worktree.
 - Use `--branch-repo` for an authorized fork only when supported.
 - Confirm the branch starts from the intended, current base.
@@ -296,7 +295,7 @@ git diff --stat
 ```
 
 Record each check as passed, failed, pending, not run, or not applicable,
-including the command, relevant SHA, and qreason for any limitation.
+including the command, relevant SHA, and reason for any limitation.
 
 For failures:
 
@@ -389,7 +388,7 @@ Inspect the current PR state:
 ```bash
 gh pr view "$PR_NUMBER" --repo "$REPO" --json \
   url,state,isDraft,baseRefName,headRefOid,mergeable,mergeStateStatus,\
-  reviewDecision,statusCheckRollup,closingIssuesReferences
+  reviewDecision,statusCheckRollup
 
 gh pr checks "$PR_NUMBER" --repo "$REPO"
 ```

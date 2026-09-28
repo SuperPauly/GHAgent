@@ -1,6 +1,6 @@
 # GitHub feature playbook
 
-Use this reference to select native features that improve the actual task.
+Use this reference to select native features that improve the task at hand.
 Availability depends on CLI version, GitHub host/version, repository or
 organization configuration, plan, permissions, and token scopes.
 
